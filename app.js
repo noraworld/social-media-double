@@ -74,8 +74,7 @@ async function createNote(commentBody) {
     {
       visibility: 'public', // TODO: add ability to specify this with a specific expression in the comment
       cw: null,             // TODO: add ability to specify this with a specific expression in the comment
-      text: commentBody,
-      not: 'found'
+      text: commentBody
     }
   );
 
