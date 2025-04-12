@@ -56,7 +56,7 @@ async function post(comments) {
       await deleteComment(comment.id);
     }
     catch (error) {
-      console.log('here!')
+      console.error('An error occurred while creating a post or delete a comment!');
       console.error(error);
       process.exit(1);
     }
