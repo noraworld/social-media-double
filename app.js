@@ -1,6 +1,6 @@
-'use strict'
+'use strict';
 
-import crypto from 'crypto'
+import crypto from 'crypto';
 import * as Misskey from 'misskey-js';
 import { Octokit } from '@octokit/rest';
 
@@ -8,32 +8,32 @@ const cache = new Map();
 const spiltCommentsCheckAttemptsMaximum = process.env.DRY_RUN === 'true' ? 1 : 5;
 
 async function run() {
-  let comments = null
-  let attempt = 0
+  let comments = null;
+  let attempt = 0;
 
   while (true) {
-    comments = await getComments()
-    if (comments.length === 0) break
-    await post(comments)
+    comments = await getComments();
+    if (comments.length === 0) break;
+    await post(comments);
 
-    attempt++
+    attempt++;
     if (process.env.DRY_RUN === 'true') {
-      console.info('The action is supposed to be performed until all the comments are transferred, but it is done only once because dry run is enabled.')
-      process.exit(0)
+      console.info('The action is supposed to be performed until all the comments are transferred, but it is done only once because dry run is enabled.');
+      process.exit(0);
     }
     else if (attempt >= spiltCommentsCheckAttemptsMaximum) {
-      console.error(`The action was run ${attempt} times, but the comments still exist.`)
-      process.exit(1)
+      console.error(`The action was run ${attempt} times, but the comments still exist.`);
+      process.exit(1);
     }
   }
 }
 
 async function getComments() {
-  const api = setupAPI()
-  let comments = []
-  let page = 1
-  const perPage = 100
-  let response = null
+  const api = setupAPI();
+  let comments = [];
+  let page = 1;
+  const perPage = 100;
+  let response = null;
 
   do {
     response = await api.octokit.issues.listComments({
@@ -41,14 +41,14 @@ async function getComments() {
       repo: api.repo,
       issue_number: process.env.ISSUE_NUMBER,
       page,
-      per_page: perPage
-    })
+      per_page: perPage,
+    });
 
-    comments = comments.concat(response.data)
-    page++
-  } while (response.data.length === perPage)
+    comments = comments.concat(response.data);
+    page++;
+  } while (response.data.length === perPage);
 
-  return comments
+  return comments;
 }
 
 async function post(comments) {
@@ -75,8 +75,8 @@ async function createNote(contentBody, fileIDs) {
   const params = {
     visibility: 'public', // TODO: add ability to specify this with a specific expression in the comment
     cw: null,             // TODO: add ability to specify this with a specific expression in the comment
-    text: contentBody
-  }
+    text: contentBody,
+  };
 
   // { fileIds: [] } or { fileIds: null } is not acceptable
   if (fileIDs.length) params.fileIds = fileIDs;
@@ -115,7 +115,7 @@ async function uploadFiles(files) {
 }
 
 async function deleteComment(commentID) {
-  const api = setupAPI()
+  const api = setupAPI();
 
   if (process.env.DRY_RUN === 'true') {
     console.info(`The comment "${commentID}" is supposed to be deleted, but not done because dry run is enabled.\n`);
@@ -126,7 +126,7 @@ async function deleteComment(commentID) {
     owner: api.owner,
     repo: api.repo,
     comment_id: commentID,
-  })
+  });
 }
 
 async function callAPIbyFetch(endpoint, file) {
@@ -138,7 +138,7 @@ async function callAPIbyFetch(endpoint, file) {
     `https://${process.env.MISSKEY_SERVER}/api/${endpoint}`,
     {
       method: 'POST',
-      body: form
+      body: form,
     }
   );
 
@@ -148,21 +148,21 @@ async function callAPIbyFetch(endpoint, file) {
 function setupAPI() {
   const octokit = process.env.PERSONAL_ACCESS_TOKEN ?
                   new Octokit({ auth: process.env[process.env.PERSONAL_ACCESS_TOKEN] }) :
-                  new Octokit({ auth: process.env.GITHUB_TOKEN })
-  const repository = process.env.GITHUB_REPOSITORY
-  const [ owner, repo ] = repository.split('/')
+                  new Octokit({ auth: process.env.GITHUB_TOKEN });
+  const repository = process.env.GITHUB_REPOSITORY;
+  const [ owner, repo ] = repository.split('/');
 
   const misskey = new Misskey.api.APIClient({
     origin: `https://${process.env.MISSKEY_SERVER}`,
-    credential: process.env.MISSKEY_API_TOKEN
+    credential: process.env.MISSKEY_API_TOKEN,
   });
 
   return {
     octokit: octokit,
     owner: owner,
     repo: repo,
-    misskey: misskey
-  }
+    misskey: misskey,
+  };
 }
 
 // https://chatgpt.com/share/67a6fe0a-c510-8004-9ed8-7b106493bb4a
@@ -185,7 +185,7 @@ async function extractAttachedFiles(commentBody) {
 
       files.push({
         name: generateFileHash(url),
-        buffer: cache.get(url)
+        buffer: cache.get(url),
       });
     }
     else if (process.env.DRY_RUN === 'true') {
@@ -205,37 +205,38 @@ async function extractAttachedFiles(commentBody) {
 
   return {
     body: commentBody,
-    files: files
+    files: files,
   };
 }
 
 // https://chatgpt.com/share/67a6fe0a-c510-8004-9ed8-7b106493bb4a
 async function downloadFile(url) {
-  let headers = null
+  let headers = null;
   const token = process.env.PERSONAL_ACCESS_TOKEN ?
                 process.env[process.env.PERSONAL_ACCESS_TOKEN] :
-                process.env.GITHUB_TOKEN
+                process.env.GITHUB_TOKEN;
 
   // to avoid exposing the GitHub token to somewhere else
   if (url.startsWith('https://github.com')) {
     headers = {
       'Authorization': `Bearer ${token}`,
-      'User-Agent': 'Node.js'
-    }
+      'User-Agent': 'Node.js',
+    };
   }
   else {
     headers = {
-      'User-Agent': 'Node.js'
-    }
+      'User-Agent': 'Node.js',
+    };
   }
 
-  if (process.env.DRY_RUN === 'true') console.info(`downloading file ${url}`)
-  const response = await fetch(url, { headers: headers })
-  if (!response.ok) throw new Error(`Failed to fetch attached file ${url}: ${response.statusText}`)
-  if (process.env.DRY_RUN === 'true') console.info(`file ${url} downloaded`)
-  if (process.env.DRY_RUN === 'true') console.info(`creating buffer from ${url}`)
-  const buffer = await response.arrayBuffer()
-  if (process.env.DRY_RUN === 'true') console.info(`buffer from ${url} created\n`)
+  if (process.env.DRY_RUN === 'true') console.info(`downloading file ${url}`);
+  const response = await fetch(url, { headers: headers });
+  if (!response.ok) throw new Error(`Failed to fetch attached file ${url}: ${response.statusText}`);
+  if (process.env.DRY_RUN === 'true') console.info(`file ${url} downloaded`);
+  if (process.env.DRY_RUN === 'true') console.info(`creating buffer from ${url}`);
+  const buffer = await response.arrayBuffer();
+  if (process.env.DRY_RUN === 'true') console.info(`buffer from ${url} created\n`);
+
   return buffer;
 }
 
@@ -249,6 +250,6 @@ function escapeRegExp(string) {
 }
 
 run().catch((error) => {
-  console.error(error)
-  process.exit(1)
-})
+  console.error(error);
+  process.exit(1);
+});
