@@ -58,9 +58,9 @@ async function post(comments) {
     try {
       [ content, options ] = setOptions(comment.body);
       [ content, files ] = await extractAttachedFiles(content);
-      fileIDs = await uploadFiles(files);
+      fileIDs = await uploadFiles(files, options.files);
 
-      await createNote(content, fileIDs, options);
+      await createNote(content, fileIDs, options.notes);
       await deleteComment(comment.id);
     }
     catch (error) {
@@ -72,6 +72,7 @@ async function post(comments) {
 }
 
 async function createNote(contentBody, fileIDs, options) {
+  if (!options) options = {};
   const defaultParams = { text: contentBody };
   if (fileIDs.length) defaultParams.fileIds = fileIDs; // MEMO: { fileIds: [] } or { fileIds: null } is not acceptable
   const params = { ...defaultParams, ...options };
@@ -88,20 +89,14 @@ async function createNote(contentBody, fileIDs, options) {
 }
 
 // INFO: it may upload the same files when the comment is different, even if the caches are found
-async function uploadFiles(files) {
+async function uploadFiles(files, options) {
   if (!files.length) return files;
   const fileIDs = [];
 
   for (let file of files) {
-    if (process.env.DRY_RUN === 'true') {
-      console.info(`The file <Buffer ${file.length} bytes> is supposed to be uploaded, but not done because dry run is enabled.`);
-      fileIDs.push(Math.random().toString(32).substring(2));
-      continue;
-    }
-
     // MEMO: misskey-js doesn't work properly
     // https://github.com/noraworld/to-do/issues/1437
-    const response = await callAPIbyFetch('drive/files/create', file);
+    const response = await callAPIbyFetch('drive/files/create', file, options);
     fileIDs.push(response.id);
   }
 
@@ -123,10 +118,24 @@ async function deleteComment(commentID) {
   });
 }
 
-async function callAPIbyFetch(endpoint, file) {
+async function callAPIbyFetch(endpoint, file, options) {
+  if (!options) options = {};
   const form = new FormData();
   form.append('i', process.env.MISSKEY_API_TOKEN);
   form.append('file', new Blob([file.buffer]), file.name);
+
+  for (const [key, value] of Object.entries(options)) {
+    form.append(key, value);
+  }
+
+  if (process.env.DRY_RUN === 'true') {
+    console.info(`The file <Buffer ${file.buffer.length} bytes> is supposed to be uploaded, but not done because dry run is enabled.`);
+    console.info('form:', form);
+
+    return {
+      id: Math.random().toString(32).substring(2),
+    };
+  }
 
   const response = await fetch(
     `https://${process.env.MISSKEY_SERVER}/api/${endpoint}`,
@@ -209,7 +218,7 @@ async function extractAttachedFiles(commentBody) {
   }
 
   return [
-    commentBody,
+    commentBody.trim(),
     files,
   ];
 }
