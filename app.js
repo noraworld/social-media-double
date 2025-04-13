@@ -108,7 +108,6 @@ async function uploadFiles(files) {
     // https://github.com/noraworld/to-do/issues/1437
     const response = await callAPIbyFetch('drive/files/create', file);
     fileIDs.push(response.id);
-    console.log(`fileIDs: ${fileIDs}`);
   }
 
   return fileIDs;
