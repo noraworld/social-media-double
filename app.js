@@ -99,7 +99,7 @@ async function uploadFiles(files) {
       continue;
     }
 
-    // misskey-js doesn't work properly
+    // MEMO: misskey-js doesn't work properly
     // https://github.com/noraworld/to-do/issues/1437
     const response = await callAPIbyFetch('drive/files/create', file);
     fileIDs.push(response.id);
