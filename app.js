@@ -78,7 +78,7 @@ async function createNote(contentBody, fileIDs, options) {
 
   if (process.env.DRY_RUN === 'true') {
     console.info(`The comment "${contentBody.split(/[\r\n|\r|\n]/)[0]}" is supposed to be posted, but not done because dry run is enabled.`);
-    console.info('params: ', params);
+    console.info('params:', params);
     return true;
   }
 
