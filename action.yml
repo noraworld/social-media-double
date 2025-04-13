@@ -1,0 +1,46 @@
+name: Social Media Double
+description: Publish a comment posted on an issue to your social media account
+author: noraworld
+branding:
+  icon: globe
+  color: blue
+
+inputs:
+  misskey_api_token:
+    description: misskey_api_token
+    required: false
+    default: ""
+  misskey_server:
+    description: misskey_server
+    required: false
+    default: ""
+  personal_access_token:
+    description: personal_access_token
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '21.6.2'
+
+    - name: Install packages
+      run: npm install
+      shell: sh
+      working-directory: ${{ github.action_path }}
+
+    - name: Post to social media
+      run: node ${{ github.action_path }}/app.js
+      shell: sh
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        ISSUE_NUMBER: ${{ github.event.issue.number }}
+        MISSKEY_API_TOKEN: ${{ inputs.misskey_api_token }}
+        MISSKEY_SERVER: ${{ inputs.misskey_server }}
+        PERSONAL_ACCESS_TOKEN: ${{ inputs.personal_access_token }}

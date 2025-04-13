@@ -121,7 +121,7 @@ async function deleteComment(commentID) {
 async function callAPIbyFetch(endpoint, file, options) {
   if (!options) options = {};
   const form = new FormData();
-  form.append('i', process.env.MISSKEY_API_TOKEN);
+  form.append('i', process.env[process.env.MISSKEY_API_TOKEN]);
   form.append('file', new Blob([file.buffer]), file.name);
 
   for (const [key, value] of Object.entries(options)) {
@@ -157,7 +157,7 @@ function setupAPI() {
 
   const misskey = new Misskey.api.APIClient({
     origin: `https://${process.env.MISSKEY_SERVER}`,
-    credential: process.env.MISSKEY_API_TOKEN,
+    credential: process.env[process.env.MISSKEY_API_TOKEN],
   });
 
   return {
