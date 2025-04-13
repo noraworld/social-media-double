@@ -52,15 +52,15 @@ async function getComments() {
 }
 
 async function post(comments) {
-  let content;
-  let fileIDs;
+  let content, options, files, fileIDs;
 
   for (let comment of comments) {
     try {
-      content = await extractAttachedFiles(comment.body);
-      fileIDs = await uploadFiles(content.files);
+      [ content, options ] = setOptions(comment.body);
+      [ content, files ] = await extractAttachedFiles(content);
+      fileIDs = await uploadFiles(files);
 
-      await createNote(content.body, fileIDs);
+      await createNote(content, fileIDs, options);
       await deleteComment(comment.id);
     }
     catch (error) {
@@ -71,15 +71,10 @@ async function post(comments) {
   }
 }
 
-async function createNote(contentBody, fileIDs) {
-  const params = {
-    visibility: 'public', // TODO: add ability to specify this with a specific expression in the comment
-    cw: null,             // TODO: add ability to specify this with a specific expression in the comment
-    text: contentBody,
-  };
-
-  // { fileIds: [] } or { fileIds: null } is not acceptable
-  if (fileIDs.length) params.fileIds = fileIDs;
+async function createNote(contentBody, fileIDs, options) {
+  const defaultParams = { text: contentBody };
+  if (fileIDs.length) defaultParams.fileIds = fileIDs; // MEMO: { fileIds: [] } or { fileIds: null } is not acceptable
+  const params = { ...defaultParams, ...options };
 
   if (process.env.DRY_RUN === 'true') {
     console.info(`The comment "${contentBody.split(/[\r\n|\r|\n]/)[0]}" is supposed to be posted, but not done because dry run is enabled.`);
@@ -164,6 +159,17 @@ function setupAPI() {
   };
 }
 
+function setOptions(commentBody) {
+  const regex = new RegExp(/^<!--\s*(\{.+?\})\s*-->/s);
+  const match = commentBody.trim().match(regex);
+  const options = match ? JSON.parse(match[1]) : {};
+
+  return [
+    commentBody.replace(regex, '').trim(),
+    options,
+  ];
+}
+
 // https://chatgpt.com/share/67a6fe0a-c510-8004-9ed8-7b106493bb4a
 // https://chatgpt.com/share/67dc00c4-4b0c-8004-9e30-4cd77023249a
 // https://chatgpt.com/share/67fa6146-f6c4-8004-9c22-3891c4884d85
@@ -202,10 +208,10 @@ async function extractAttachedFiles(commentBody) {
     cache.set(url, newUrl);
   }
 
-  return {
-    body: commentBody,
-    files: files,
-  };
+  return [
+    commentBody,
+    files,
+  ];
 }
 
 // https://chatgpt.com/share/67a6fe0a-c510-8004-9ed8-7b106493bb4a
