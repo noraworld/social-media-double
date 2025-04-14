@@ -58,6 +58,7 @@ async function post(comments) {
     try {
       [ content, options ] = setOptions(comment.body);
       [ content, files ] = await extractAttachedFiles(content);
+      content = buildTemplates(content);
       fileIDs = await uploadFiles(files, options.files);
 
       await createNote(content, fileIDs, options.notes);
@@ -221,6 +222,21 @@ async function extractAttachedFiles(commentBody) {
     commentBody.trim(),
     files,
   ];
+}
+
+// https://chatgpt.com/share/67fd4e7b-a144-8004-a382-d2eccca4cc16
+function buildTemplates(content) {
+  return content.replace(/\{\{\s*RANDOM\(([^)]+)\)\s*\}\}/g, (_, group) => {
+    const choices = group
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s !== '');
+
+    if (choices.length === 0) return '';
+
+    const randomChoice = choices[Math.floor(Math.random() * choices.length)];
+    return randomChoice;
+  });
 }
 
 // https://chatgpt.com/share/67a6fe0a-c510-8004-9ed8-7b106493bb4a
