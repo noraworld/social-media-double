@@ -57,6 +57,7 @@ async function post(comments) {
   for (let comment of comments) {
     try {
       [ content, options ] = setOptions(comment.body);
+      options = await replaceLatestNoteID(options);
       [ content, files ] = await extractAttachedFiles(content);
       content = buildTemplates(content);
       fileIDs = await uploadFiles(files, options.files);
@@ -178,6 +179,23 @@ function setOptions(commentBody) {
     commentBody.replace(regex, '').trim(),
     options,
   ];
+}
+
+async function replaceLatestNoteID(options) {
+  if (options.notes?.replyId !== 'latest') return options;
+
+  const api = setupAPI().misskey;
+
+  const latestNoteId = await api.request('i')
+    .then(account => api.request('users/notes', {
+      userId: account.id,
+      limit: 1
+    }))
+    .then(notes => notes[0].id);
+
+  options.notes.replyId = latestNoteId;
+
+  return options;
 }
 
 // https://chatgpt.com/share/67a6fe0a-c510-8004-9ed8-7b106493bb4a
